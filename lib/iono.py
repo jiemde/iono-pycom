@@ -12,8 +12,11 @@ class IonoPin:
         self._pin = Pin(pin, mode=mode, pull=pull)
         self._iono_id = id
 
-    def __call__(self):
-        return self._pin()
+    def __call__(self, val=None):
+        if val is None:
+            return self._pin()
+        else:
+            self._pin(val)
 
     def id(self):
         return self._iono_id
