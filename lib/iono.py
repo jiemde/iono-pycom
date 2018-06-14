@@ -64,6 +64,25 @@ class AI:
     def get_adcchannel(self):
         return self._channel
 
+class AO:
+    def __init__(self, id, dac):
+        self._iono_id = id
+        self._dac = dac
+        self._value = 0
+
+    def __call__(self, val=None):
+        if val is None:
+            return self._value
+        else:
+            self._dac.write(val / 10000)
+            self._value = val
+
+    def id(self):
+        return self._iono_id
+
+    def get_dac(self):
+        return self._dac
+
 class FilteredIn:
     def __init__(self, pin):
         self._pin = pin
@@ -88,44 +107,77 @@ class Filter:
         self._min_var_mV = min_var_mV
         self._min_var_uA = min_var_uA
 
+        self.all = []
+
         if io.DI1:
             self.DI1 = FilteredIn(io.DI1)
             self.AV1 = None
             self.AI1 = None
-        else:
+            self.all.append(self.DI1)
+        elif io.AV1:
             self.AV1 = FilteredIn(io.AV1)
-            self.AI1 = FilteredIn(io.AI1)
+            self.AI1 = None
             self.DI1 = None
+            self.all.append(self.AV1)
+        else:
+            self.AI1 = FilteredIn(io.AI1)
+            self.AV1 = None
+            self.DI1 = None
+            self.all.append(self.AI1)
 
         if io.DI2:
             self.DI2 = FilteredIn(io.DI2)
             self.AV2 = None
             self.AI2 = None
-        else:
+            self.all.append(self.DI2)
+        elif io.AV2:
             self.AV2 = FilteredIn(io.AV2)
-            self.AI2 = FilteredIn(io.AI2)
+            self.AI2 = None
             self.DI2 = None
+            self.all.append(self.AV2)
+        else:
+            self.AI2 = FilteredIn(io.AI2)
+            self.AV2 = None
+            self.DI2 = None
+            self.all.append(self.AI2)
 
         if io.DI3:
             self.DI3 = FilteredIn(io.DI3)
             self.AV3 = None
             self.AI3 = None
-        else:
+            self.all.append(self.DI3)
+        elif io.AV3:
             self.AV3 = FilteredIn(io.AV3)
-            self.AI3 = FilteredIn(io.AI3)
+            self.AI3 = None
             self.DI3 = None
+            self.all.append(self.AV3)
+        else:
+            self.AI3 = FilteredIn(io.AI3)
+            self.AV3 = None
+            self.DI3 = None
+            self.all.append(self.AI3)
 
         if io.DI4:
             self.DI4 = FilteredIn(io.DI4)
             self.AV4 = None
             self.AI4 = None
-        else:
+            self.all.append(self.DI4)
+        elif io.AV4:
             self.AV4 = FilteredIn(io.AV4)
-            self.AI4 = FilteredIn(io.AI4)
+            self.AI4 = None
             self.DI4 = None
+            self.all.append(self.AV4)
+        else:
+            self.AI4 = FilteredIn(io.AI4)
+            self.AV4 = None
+            self.DI4 = None
+            self.all.append(self.AI4)
 
         self.DI5 = FilteredIn(io.DI5)
         self.DI6 = FilteredIn(io.DI6)
+
+        self.all.append(self.DI5)
+        self.all.append(self.DI6)
 
     def process(self):
         changed = []
@@ -142,10 +194,10 @@ class Filter:
         if self.DI4 and self._update_input(self.DI4, self._digital_stable_ms, 0):
             changed.append(self.DI4)
 
-        if self.DI5 and self._update_input(self.DI5, self._digital_stable_ms, 0):
+        if self._update_input(self.DI5, self._digital_stable_ms, 0):
             changed.append(self.DI5)
 
-        if self.DI6 and self._update_input(self.DI6, self._digital_stable_ms, 0):
+        if self._update_input(self.DI6, self._digital_stable_ms, 0):
             changed.append(self.DI6)
 
         if self.AV1 and self._update_input(self.AV1, self._analog_stable_ms, self._min_var_mV):
@@ -193,58 +245,97 @@ class Filter:
 
 class IO:
 
-    MODE_DIGITAL = const(0)
-    MODE_ANALOG = const(1)
+    MODE_D = const(0)
+    MODE_V = const(1)
+    MODE_I = const(2)
 
-    def __init__(self, i1=MODE_DIGITAL, i2=MODE_DIGITAL, i3=MODE_DIGITAL, i4=MODE_DIGITAL):
-        self.DO1 = IonoPin(id='DO1', pin='P21', mode=Pin.OUT, pull=None)
+    def __init__(self, i1=MODE_D, i2=MODE_D, i3=MODE_D, i4=MODE_D):
+        self.DO1 = IonoPin('DO1', 'P21', mode=Pin.OUT)
         self.DO2 = IonoPin('DO2', 'P23', mode=Pin.OUT)
         self.DO3 = IonoPin('DO3', 'P8', mode=Pin.OUT)
         self.DO4 = IonoPin('DO4', 'P11', mode=Pin.OUT)
 
-        if i1 is MODE_DIGITAL:
+        self.all = [self.DO1, self.DO2, self.DO3, self.DO4]
+
+        if i1 is MODE_V:
+            chan = self._getADC().channel(pin='P14', attn=ADC.ATTN_11DB)
+            self.AV1 = AV('AV1', chan)
+            self.AI1 = None
+            self.DI1 = None
+            self.all.append(self.AV1)
+        elif i1 is MODE_I:
+            chan = self._getADC().channel(pin='P14', attn=ADC.ATTN_11DB)
+            self.AI1 = AV('AI1', chan)
+            self.AV1 = None
+            self.DI1 = None
+            self.all.append(self.AI1)
+        else:
             self.DI1 = IonoPin('DI1', 'P14', mode=Pin.IN, pull=None)
             self.AV1 = None
             self.AI1 = None
-        else:
-            chan = self._getADC().channel(pin='P14', attn=ADC.ATTN_11DB)
-            self.AV1 = AV('AV1', chan)
-            self.AI1 = AI('AI1', chan)
-            self.DI1 = None
+            self.all.append(self.DI1)
 
-        if i2 is MODE_DIGITAL:
+        if i2 is MODE_V:
+            chan = self._getADC().channel(pin='P13', attn=ADC.ATTN_11DB)
+            self.AV2 = AV('AV2', chan)
+            self.AI2 = None
+            self.DI2 = None
+            self.all.append(self.AV2)
+        elif i2 is MODE_I:
+            chan = self._getADC().channel(pin='P13', attn=ADC.ATTN_11DB)
+            self.AI2 = AV('AI2', chan)
+            self.AV2 = None
+            self.DI2 = None
+            self.all.append(self.AI2)
+        else:
             self.DI2 = IonoPin('DI2', 'P13', mode=Pin.IN, pull=None)
             self.AV2 = None
             self.AI2 = None
-        else:
-            chan = self._getADC().channel(pin='P13', attn=ADC.ATTN_11DB)
-            self.AV2 = AV('AV2', chan)
-            self.AI2 = AI('AI2', chan)
-            self.DI2 = None
+            self.all.append(self.DI2)
 
-        if i3 is MODE_DIGITAL:
+        if i3 is MODE_V:
+            chan = self._getADC().channel(pin='P16', attn=ADC.ATTN_11DB)
+            self.AV3 = AV('AV3', chan)
+            self.AI3 = None
+            self.DI3 = None
+            self.all.append(self.AV3)
+        elif i3 is MODE_I:
+            chan = self._getADC().channel(pin='P16', attn=ADC.ATTN_11DB)
+            self.AI3 = AV('AI3', chan)
+            self.AV3 = None
+            self.DI3 = None
+            self.all.append(self.AI3)
+        else:
             self.DI3 = IonoPin('DI3', 'P16', mode=Pin.IN, pull=None)
             self.AV3 = None
             self.AI3 = None
-        else:
-            chan = self._getADC().channel(pin='P16', attn=ADC.ATTN_11DB)
-            self.AV3 = AV('AV3', chan)
-            self.AI3 = AI('AI3', chan)
-            self.DI3 = None
+            self.all.append(self.DI3)
 
-        if i4 is MODE_DIGITAL:
+        if i4 is MODE_V:
+            chan = self._getADC().channel(pin='P15', attn=ADC.ATTN_11DB)
+            self.AV4 = AV('AV4', chan)
+            self.AI4 = None
+            self.DI4 = None
+            self.all.append(self.AV4)
+        elif i4 is MODE_I:
+            chan = self._getADC().channel(pin='P15', attn=ADC.ATTN_11DB)
+            self.AI4 = AV('AI4', chan)
+            self.AV4 = None
+            self.DI4 = None
+            self.all.append(self.AI4)
+        else:
             self.DI4 = IonoPin('DI4', 'P15', mode=Pin.IN, pull=None)
             self.AV4 = None
             self.AI4 = None
-        else:
-            chan = self._getADC().channel(pin='P15', attn=ADC.ATTN_11DB)
-            self.AV4 = AV('AV4', chan)
-            self.AI4 = AI('AI4', chan)
-            self.DI4 = None
+            self.all.append(self.DI4)
 
         self.DI5 = IonoPin('DI5', 'P18', mode=Pin.IN, pull=None)
         self.DI6 = IonoPin('DI6', 'P17', mode=Pin.IN, pull=None)
-        self.AO1 = DAC('P22')
+        self.AO1 = AO('AO1', DAC('P22'))
+
+        self.all.append(self.DI5)
+        self.all.append(self.DI6)
+        self.all.append(self.AO1)
 
     def _getADC(self):
         if not hasattr(self, '_adc'):
