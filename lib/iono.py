@@ -83,7 +83,7 @@ class AO:
     def get_dac(self):
         return self._dac
 
-class FilteredIn:
+class FilteredPin:
     def __init__(self, pin):
         self._pin = pin
         self._value = None
@@ -107,80 +107,99 @@ class Filter:
         self._min_var_mV = min_var_mV
         self._min_var_uA = min_var_uA
 
-        self.all = []
+        self.DO1 = FilteredPin(io.DO1)
+        self.DO2 = FilteredPin(io.DO2)
+        self.DO3 = FilteredPin(io.DO3)
+        self.DO4 = FilteredPin(io.DO4)
+
+        self.all = [self.DO1, self.DO2, self.DO3, self.DO4]
 
         if io.DI1:
-            self.DI1 = FilteredIn(io.DI1)
+            self.DI1 = FilteredPin(io.DI1)
             self.AV1 = None
             self.AI1 = None
             self.all.append(self.DI1)
         elif io.AV1:
-            self.AV1 = FilteredIn(io.AV1)
+            self.AV1 = FilteredPin(io.AV1)
             self.AI1 = None
             self.DI1 = None
             self.all.append(self.AV1)
         else:
-            self.AI1 = FilteredIn(io.AI1)
+            self.AI1 = FilteredPin(io.AI1)
             self.AV1 = None
             self.DI1 = None
             self.all.append(self.AI1)
 
         if io.DI2:
-            self.DI2 = FilteredIn(io.DI2)
+            self.DI2 = FilteredPin(io.DI2)
             self.AV2 = None
             self.AI2 = None
             self.all.append(self.DI2)
         elif io.AV2:
-            self.AV2 = FilteredIn(io.AV2)
+            self.AV2 = FilteredPin(io.AV2)
             self.AI2 = None
             self.DI2 = None
             self.all.append(self.AV2)
         else:
-            self.AI2 = FilteredIn(io.AI2)
+            self.AI2 = FilteredPin(io.AI2)
             self.AV2 = None
             self.DI2 = None
             self.all.append(self.AI2)
 
         if io.DI3:
-            self.DI3 = FilteredIn(io.DI3)
+            self.DI3 = FilteredPin(io.DI3)
             self.AV3 = None
             self.AI3 = None
             self.all.append(self.DI3)
         elif io.AV3:
-            self.AV3 = FilteredIn(io.AV3)
+            self.AV3 = FilteredPin(io.AV3)
             self.AI3 = None
             self.DI3 = None
             self.all.append(self.AV3)
         else:
-            self.AI3 = FilteredIn(io.AI3)
+            self.AI3 = FilteredPin(io.AI3)
             self.AV3 = None
             self.DI3 = None
             self.all.append(self.AI3)
 
         if io.DI4:
-            self.DI4 = FilteredIn(io.DI4)
+            self.DI4 = FilteredPin(io.DI4)
             self.AV4 = None
             self.AI4 = None
             self.all.append(self.DI4)
         elif io.AV4:
-            self.AV4 = FilteredIn(io.AV4)
+            self.AV4 = FilteredPin(io.AV4)
             self.AI4 = None
             self.DI4 = None
             self.all.append(self.AV4)
         else:
-            self.AI4 = FilteredIn(io.AI4)
+            self.AI4 = FilteredPin(io.AI4)
             self.AV4 = None
             self.DI4 = None
             self.all.append(self.AI4)
 
-        self.DI5 = FilteredIn(io.DI5)
-        self.DI6 = FilteredIn(io.DI6)
+        self.DI5 = FilteredPin(io.DI5)
+        self.DI6 = FilteredPin(io.DI6)
+        self.AO1 = FilteredPin(io.AO1)
 
         self.all.append(self.DI5)
         self.all.append(self.DI6)
+        self.all.append(self.AO1)
 
     def process(self):
         changed = []
+
+        if self._update_input(self.DO1, 0, 0):
+            changed.append(self.DO1)
+
+        if self._update_input(self.DO2, 0, 0):
+            changed.append(self.DO2)
+
+        if self._update_input(self.DO3, 0, 0):
+            changed.append(self.DO3)
+
+        if self._update_input(self.DO4, 0, 0):
+            changed.append(self.DO4)
 
         if self.DI1 and self._update_input(self.DI1, self._digital_stable_ms, 0):
             changed.append(self.DI1)
@@ -224,6 +243,9 @@ class Filter:
         if self.AI4 and self._update_input(self.AI4, self._analog_stable_ms, self._min_var_uA):
             changed.append(self.AI4)
 
+        if self._update_input(self.AO1, 0, self._min_var_uA):
+            changed.append(self.AO1)
+
         return changed
 
     def _update_input(self, input, stable_ms, min_var):
@@ -235,7 +257,7 @@ class Filter:
             input._last_value = val
             input._last_ts = ts
 
-        if input._last_ts == None or time.ticks_diff(input._last_ts, ts) >= stable_ms:
+        if stable_ms == 0 or input._value == None or time.ticks_diff(input._last_ts, ts) >= stable_ms:
             if val != input._value:
                 if input._value == None or abs(input._value - val) >= min_var:
                     input._value = val
