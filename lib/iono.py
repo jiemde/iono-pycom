@@ -243,7 +243,7 @@ class Filter:
         if self.AI4 and self._update_input(self.AI4, self._analog_stable_ms, self._min_var_uA):
             changed.append(self.AI4)
 
-        if self._update_input(self.AO1, 0, self._min_var_uA):
+        if self._update_input(self.AO1, 0, 0):
             changed.append(self.AO1)
 
         return changed
