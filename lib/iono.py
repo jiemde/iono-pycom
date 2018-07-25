@@ -252,16 +252,16 @@ class Filter:
         val = input._pin()
         ts = time.ticks_ms()
 
-        if val != input._last_value:
-            # TODO consider checking if the difference is negligible for analog values
-            input._last_value = val
-            input._last_ts = ts
-
-        if stable_ms == 0 or input._value == None or time.ticks_diff(input._last_ts, ts) >= stable_ms:
-            if val != input._value:
-                if input._value == None or abs(input._value - val) >= min_var:
+        if input._value != val:
+            if input._value == None or abs(input._value - val) >= min_var:
+                if input._value == None or time.ticks_diff(input._last_ts, ts) >= stable_ms:
                     input._value = val
+                    input._last_ts = ts
                     return True
+            else:
+                input._last_ts = ts
+        else:
+            input._last_ts = ts
 
         return False
 
